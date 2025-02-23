@@ -1,54 +1,46 @@
-# Install necessary libraries (for Google Colab or local machine)
+# Install necessary libraries
 !pip install yfinance pandas
 
 import yfinance as yf
 import pandas as pd
+from datetime import datetime, timedelta
 
-# Define stock tickers
-textile_tickers = ["VFC", "NKE", "HNNMY", "ADDYY", "GPS"]
-related_tickers = ["TJX", "ROST", "BURL", "ZGN", "LVMUY"]
+# Define stock tickers for the Music Industry and Related Industry
+music_industry_tickers = ["SIRI", "WMG", "SONO"]  # Example: SiriusXM, Warner Music Group, Sonos
+related_industry_tickers = ["SPOT", "NFLX", "DIS"]  # Example: Spotify, Netflix, Disney (streaming/entertainment)
 
-# Function to fetch stock data and handle missing columns
-def get_stock_data(tickers):
-    try:
-        # Fetch 5 years of monthly data
-        data = yf.download(tickers, period="5y", interval="1mo")
+# Define date range
+end_date = datetime.today().strftime('%Y-%m-%d')
+start_date = (datetime.today() - timedelta(days=365)).strftime('%Y-%m-%d')
 
-        # Check available columns
-        print(f"Available columns: {data.columns.levels[0] if isinstance(data.columns, pd.MultiIndex) else data.columns}")
+def fetch_stock_data(tickers, start, end):
+    """Fetch historical stock data for the given tickers and save as a DataFrame."""
+    stock_data = yf.download(tickers, start=start, end=end)
 
-        # Prioritize 'Adj Close' but use 'Close' if missing
-        if "Adj Close" in data.columns:
-            data = data["Adj Close"]
-        elif "Close" in data.columns:
-            data = data["Close"]
-        else:
-            print("⚠ No 'Adj Close' or 'Close' column found!")
-            return pd.DataFrame()  # Return empty DataFrame if no price data is available
+    # Print columns to check if 'Adj Close' exists
+    print("Available columns:", stock_data.keys())
 
-        return data
+    # Use 'Close' if 'Adj Close' is missing
+    if 'Adj Close' in stock_data:
+        return stock_data['Adj Close']
+    else:
+        print("Warning: 'Adj Close' missing, using 'Close' instead.")
+        return stock_data['Close'] if 'Close' in stock_data else stock_data
 
-    except Exception as e:
-        print(f"❌ Error fetching data: {e}")
-        return pd.DataFrame()
+# Fetch data for both industries
+music_industry_data = fetch_stock_data(music_industry_tickers, start_date, end_date)
+related_industry_data = fetch_stock_data(related_industry_tickers, start_date, end_date)
 
-# Fetch data for textiles industry
-print("Fetching Yahoo Finance data for Textile Industry...")
-textile_stock_data = get_stock_data(textile_tickers)
+# Save to CSV
+music_csv_path = "/content/Music_Industry_Stocks.csv"
+related_csv_path = "/content/Related_Industry_Stocks.csv"
 
-# Fetch data for related industry
-print("Fetching Yahoo Finance data for Related Industry (Apparel & Retail)...")
-related_stock_data = get_stock_data(related_tickers)
+music_industry_data.to_csv(music_csv_path)
+related_industry_data.to_csv(related_csv_path)
 
-# Save to CSV files only if data exists
-if not textile_stock_data.empty:
-    textile_csv_path = "textile_stock_data.csv"
-    textile_stock_data.to_csv(textile_csv_path)
-    print(f"✅ Textile industry data saved to {textile_csv_path}")
+# Provide download links
+from google.colab import files
+files.download(music_csv_path)
+files.download(related_csv_path)
 
-if not related_stock_data.empty:
-    related_csv_path = "related_stock_data.csv"
-    related_stock_data.to_csv(related_csv_path)
-    print(f"✅ Related industry data saved to {related_csv_path}")
-
-print("✅ Data retrieval complete!")
+print("Download the CSV files for Music and Related Industries.")
